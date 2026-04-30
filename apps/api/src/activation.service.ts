@@ -14,6 +14,14 @@ type BatchAnswerSubmissionPayload = {
   answers: AnswerSubmissionPayload[]
 }
 
+type ActivationChecklistItem = {
+  key: string
+  label: string
+  completed: boolean
+  helper: string
+  action?: string
+}
+
 @Injectable()
 export class ActivationService {
   constructor(private readonly prisma: PrismaService) {}
@@ -232,6 +240,80 @@ export class ActivationService {
     return this.prisma.growthExperiment.findMany({
       include: { school: true },
       orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  async activationChecklist() {
+    const schools = await this.prisma.school.findMany({
+      include: {
+        teachers: true,
+        trials: true,
+        subscriptions: true,
+        sessions: { include: { answers: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return schools.map((school) => {
+      const answersSubmitted = school.sessions.reduce(
+        (total, session) => total + session.answers.length,
+        0,
+      )
+      const onboardedTeachers = school.teachers.filter((teacher) => teacher.onboardedAt !== null).length
+      const items: ActivationChecklistItem[] = [
+        {
+          key: 'trial_started',
+          label: 'Start a school trial',
+          completed: school.trials.length > 0,
+          helper: 'Create the first evaluation path for the school.',
+          action: 'Start trial',
+        },
+        {
+          key: 'first_teacher_onboarded',
+          label: 'Onboard the first teacher',
+          completed: onboardedTeachers > 0,
+          helper: 'Make sure one teacher reaches the classroom product.',
+          action: 'Complete onboarding',
+        },
+        {
+          key: 'second_teacher_invited',
+          label: 'Invite a second teacher',
+          completed: school.teachers.length >= 2,
+          helper: 'Expansion starts when usage spreads beyond one champion.',
+          action: 'Invite teacher',
+        },
+        {
+          key: 'first_session_created',
+          label: 'Create the first classroom session',
+          completed: school.sessions.length > 0,
+          helper: 'A session turns onboarding into classroom value.',
+          action: 'Create session',
+        },
+        {
+          key: 'first_answers_captured',
+          label: 'Capture student answers',
+          completed: answersSubmitted > 0,
+          helper: 'Answer signals show that the product reached learners.',
+          action: 'Collect answers',
+        },
+        {
+          key: 'conversion_ready',
+          label: 'Reach conversion readiness',
+          completed: answersSubmitted >= 25 || school.subscriptions.length > 0,
+          helper: 'Schools with strong answer volume are ready for a subscription conversation.',
+          action: 'Convert trial',
+        },
+      ]
+      const completed = items.filter((item) => item.completed).length
+      const nextItem = items.find((item) => !item.completed)
+
+      return {
+        schoolId: school.id,
+        schoolName: school.name,
+        items,
+        completionRate: Math.round((completed / items.length) * 100),
+        nextAction: nextItem?.action,
+      }
     })
   }
 

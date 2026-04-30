@@ -34,3 +34,19 @@ export interface AnswerSubmissionPayload {
 export interface BatchAnswerSubmissionPayload {
   answers: AnswerSubmissionPayload[]
 }
+
+export interface ActivationChecklistItem {
+  key: string
+  label: string
+  completed: boolean
+  helper: string
+  action?: string
+}
+
+export interface ActivationChecklist {
+  schoolId: string
+  schoolName: string
+  items: ActivationChecklistItem[]
+  completionRate: number
+  nextAction?: string
+}

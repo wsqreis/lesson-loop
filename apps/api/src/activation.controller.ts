@@ -93,6 +93,11 @@ export class ActivationController {
     return this.activation.experiments()
   }
 
+  @Get('activation/checklist')
+  activationChecklist() {
+    return this.activation.activationChecklist()
+  }
+
   @Get('ai/recommendations')
   recommendations() {
     return this.activation.recommendations()

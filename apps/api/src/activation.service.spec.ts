@@ -67,6 +67,34 @@ describe('ActivationService analytics', () => {
   })
 })
 
+describe('ActivationService activation checklist', () => {
+  it('calculates completion and next action', async () => {
+    const service = createService({
+      school: {
+        findMany: async () => [
+          {
+            id: 'school-1',
+            name: 'Northstar Primary',
+            teachers: [{ onboardedAt: new Date() }],
+            trials: [{}],
+            subscriptions: [],
+            sessions: [{ answers: [{}, {}] }],
+          },
+        ],
+      },
+    })
+
+    await expect(service.activationChecklist()).resolves.toMatchObject([
+      {
+        schoolId: 'school-1',
+        schoolName: 'Northstar Primary',
+        completionRate: 67,
+        nextAction: 'Invite teacher',
+      },
+    ])
+  })
+})
+
 describe('ActivationService answer ingestion', () => {
   it('creates answers and activation events in a batch', async () => {
     const calls: Array<{ model: string; data: unknown[] }> = []

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AiRecommendation, FunnelSummary } from '@lesson-loop/shared'
+import type { ActivationChecklist, AiRecommendation, FunnelSummary } from '@lesson-loop/shared'
 
 interface School {
   id: string
@@ -41,6 +41,9 @@ const { data: schoolMetrics, refresh: refreshSchoolMetrics } = await useAsyncDat
   api<SchoolMetric[]>('/analytics/schools'),
 )
 const { data: experiments } = await useAsyncData('experiments', () => api<Experiment[]>('/experiments'))
+const { data: checklists, refresh: refreshChecklists } = await useAsyncData('activation-checklist', () =>
+  api<ActivationChecklist[]>('/activation/checklist'),
+)
 
 const selectedSchoolId = computed(() => schools.value?.[0]?.id ?? '')
 const invite = reactive({ name: 'Jordan Lee', email: 'jordan@northstar.example' })
@@ -48,7 +51,13 @@ const conversion = reactive({ plan: 'school' as const, seats: 12 })
 const actionMessage = ref<string | null>(null)
 
 async function refreshDashboard() {
-  await Promise.all([refreshFunnel(), refreshRecommendations(), refreshSchools(), refreshSchoolMetrics()])
+  await Promise.all([
+    refreshFunnel(),
+    refreshRecommendations(),
+    refreshSchools(),
+    refreshSchoolMetrics(),
+    refreshChecklists(),
+  ])
 }
 
 async function inviteTeacher() {
@@ -88,6 +97,33 @@ async function convertSchool() {
         <MetricCard label="Sessions" :value="funnel.sessionsCreated" helper="Classroom moments created" />
         <MetricCard label="Answers" :value="funnel.answersSubmitted" helper="Student engagement events" />
         <MetricCard label="Conversion" :value="`${funnel.conversionRate}%`" helper="Trial to subscription" />
+      </section>
+
+      <section class="mt-8 rounded-3xl border border-white/10 bg-white/[0.06] p-6">
+        <div class="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          <div>
+            <h2 class="text-2xl font-bold">Teacher activation checklist</h2>
+            <p class="mt-2 text-sm text-slate-400">Track the practical steps that turn one trial teacher into school-wide usage.</p>
+          </div>
+        </div>
+        <div class="mt-5 grid gap-4 lg:grid-cols-2">
+          <article v-for="checklist in checklists" :key="checklist.schoolId" class="rounded-2xl bg-slate-900 p-4">
+            <div class="flex items-center justify-between gap-4">
+              <h3 class="font-semibold">{{ checklist.schoolName }}</h3>
+              <span class="rounded-full bg-cyan-300/10 px-3 py-1 text-sm font-semibold text-cyan-200">{{ checklist.completionRate }}%</span>
+            </div>
+            <p v-if="checklist.nextAction" class="mt-2 text-sm text-amber-200">Next action: {{ checklist.nextAction }}</p>
+            <div class="mt-4 space-y-3">
+              <div v-for="item in checklist.items" :key="item.key" class="flex gap-3 rounded-xl bg-slate-950/70 p-3">
+                <span class="mt-1 h-3 w-3 rounded-full" :class="item.completed ? 'bg-emerald-300' : 'bg-slate-600'" />
+                <div>
+                  <p class="text-sm font-semibold">{{ item.label }}</p>
+                  <p class="mt-1 text-xs text-slate-400">{{ item.helper }}</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
