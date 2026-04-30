@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TrialStatus {
+  active
+  converted
+  expired
+}
+
+enum SubscriptionPlan {
+  starter
+  school
+  district
+}
+
+enum ActivationEventType {
+  trial_started
+  teacher_invited
+  teacher_onboarded
+  session_created
+  answer_submitted
+  subscription_started
+}
+
+model School {
+  id            String            @id @default(cuid())
+  name          String
+  country       String
+  createdAt     DateTime          @default(now())
+  teachers      Teacher[]
+  trials        Trial[]
+  subscriptions Subscription[]
+  sessions      ClassroomSession[]
+  events        ActivationEvent[]
+}
+
+model Teacher {
+  id          String             @id @default(cuid())
+  schoolId    String
+  email       String             @unique
+  name        String
+  role        String             @default("teacher")
+  onboardedAt DateTime?
+  createdAt   DateTime           @default(now())
+  school      School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sessions    ClassroomSession[]
+  events      ActivationEvent[]
+}
+
+model Trial {
+  id        String      @id @default(cuid())
+  schoolId  String
+  status    TrialStatus @default(active)
+  startsAt  DateTime    @default(now())
+  endsAt    DateTime
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id        String           @id @default(cuid())
+  schoolId  String
+  plan      SubscriptionPlan
+  seats     Int
+  startsAt  DateTime         @default(now())
+  school    School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model ClassroomSession {
+  id          String          @id @default(cuid())
+  schoolId    String
+  teacherId   String
+  title       String
+  subject     String
+  grade       String
+  scheduledAt DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  school      School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  activities  Activity[]
+  answers     StudentAnswer[]
+}
+
+model Activity {
+  id        String           @id @default(cuid())
+  sessionId String
+  prompt    String
+  kind      String
+  createdAt DateTime         @default(now())
+  session   ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers   StudentAnswer[]
+}
+
+model StudentAnswer {
+  id          String           @id @default(cuid())
+  sessionId   String
+  activityId  String
+  studentCode String
+  answer      String
+  isCorrect   Boolean
+  submittedAt DateTime         @default(now())
+  session     ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  activity    Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+model ActivationEvent {
+  id        String              @id @default(cuid())
+  schoolId  String
+  teacherId String?
+  type      ActivationEventType
+  metadata  String              @default("{}")
+  createdAt DateTime            @default(now())
+  school    School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher   Teacher?            @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+}
