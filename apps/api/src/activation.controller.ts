@@ -53,6 +53,11 @@ export class ActivationController {
     return this.activation.findSessionByJoinCode(joinCode)
   }
 
+  @Get('sessions/:sessionId')
+  sessionDetail(@Param('sessionId') sessionId: string) {
+    return this.activation.sessionDetail(sessionId)
+  }
+
   @Post('sessions')
   createSession(
     @Body()

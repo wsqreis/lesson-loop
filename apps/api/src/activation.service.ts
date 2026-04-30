@@ -121,6 +121,18 @@ export class ActivationService {
     })
   }
 
+  async sessionDetail(sessionId: string) {
+    return this.prisma.classroomSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        activities: true,
+        answers: { orderBy: { submittedAt: 'desc' }, take: 50 },
+        teacher: true,
+        school: true,
+      },
+    })
+  }
+
   async submitAnswer(data: AnswerSubmissionPayload) {
     const session = await this.prisma.classroomSession.findUniqueOrThrow({
       where: { id: data.sessionId },

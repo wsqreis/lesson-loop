@@ -67,6 +67,28 @@ describe('ActivationService analytics', () => {
   })
 })
 
+describe('ActivationService session detail', () => {
+  it('loads a board-ready session payload', async () => {
+    const service = createService({
+      classroomSession: {
+        findUniqueOrThrow: async ({ where }: { where: { id: string } }) => ({
+          id: where.id,
+          joinCode: 'MATH-42',
+          activities: [],
+          answers: [],
+          teacher: { name: 'Maya Chen' },
+          school: { name: 'Northstar Primary' },
+        }),
+      },
+    })
+
+    await expect(service.sessionDetail('session-1')).resolves.toMatchObject({
+      id: 'session-1',
+      joinCode: 'MATH-42',
+    })
+  })
+})
+
 describe('ActivationService activation checklist', () => {
   it('calculates completion and next action', async () => {
     const service = createService({

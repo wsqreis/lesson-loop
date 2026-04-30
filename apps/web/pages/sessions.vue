@@ -90,7 +90,10 @@ async function submitAnswer(sessionId: string, activityId: string) {
                 <p class="mt-1 text-sm text-cyan-200">{{ session.subject }} · {{ session.grade }}</p>
                 <p class="mt-3 inline-flex rounded-full bg-cyan-300/10 px-3 py-1 text-sm font-semibold text-cyan-200">Join code: {{ session.joinCode }}</p>
               </div>
-              <p class="rounded-full bg-white/10 px-4 py-2 text-sm">{{ session.answers.length }} answers</p>
+              <div class="flex flex-wrap gap-2">
+                <NuxtLink class="rounded-full bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950" :to="`/sessions/${session.id}/board`">Open board</NuxtLink>
+                <p class="rounded-full bg-white/10 px-4 py-2 text-sm">{{ session.answers.length }} answers</p>
+              </div>
             </div>
             <div class="mt-5 space-y-3">
               <div v-for="activity in session.activities" :key="activity.id" class="rounded-2xl bg-slate-900 p-4">
