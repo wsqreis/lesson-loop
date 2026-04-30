@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lesson-loop
+  namespace: lesson-loop
+  labels:
+    app.kubernetes.io/name: lesson-loop
+  annotations:
+    kubernetes.io/ingress.class: gce
+spec:
+  rules:
+    - host: lesson-loop.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: lesson-loop-api
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lesson-loop-web
+                port:
+                  number: 3000

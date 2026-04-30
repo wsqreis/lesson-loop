@@ -2,15 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: lesson-loop-api
+  namespace: lesson-loop
+  labels:
+    app.kubernetes.io/name: lesson-loop
+    app.kubernetes.io/component: api
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: lesson-loop-api
+      app.kubernetes.io/name: lesson-loop
+      app.kubernetes.io/component: api
   template:
     metadata:
       labels:
-        app: lesson-loop-api
+        app.kubernetes.io/name: lesson-loop
+        app.kubernetes.io/component: api
     spec:
       containers:
         - name: api
@@ -23,23 +29,61 @@ spec:
               value: "3001"
             - name: DATABASE_URL
               valueFrom:
-                configMapKeyRef:
-                  name: lesson-loop-config
-                  key: databaseUrl
+                secretKeyRef:
+                  name: lesson-loop-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           readinessProbe:
             httpGet:
               path: /health
               port: 3001
             initialDelaySeconds: 5
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: lesson-loop-api
+  namespace: lesson-loop
+  labels:
+    app.kubernetes.io/name: lesson-loop
+    app.kubernetes.io/component: api
 spec:
   selector:
-    app: lesson-loop-api
+    app.kubernetes.io/name: lesson-loop
+    app.kubernetes.io/component: api
   ports:
     - port: 3001
       targetPort: 3001
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: lesson-loop-api
+  namespace: lesson-loop
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: lesson-loop-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

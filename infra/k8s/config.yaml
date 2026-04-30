@@ -2,6 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: lesson-loop-config
+  namespace: lesson-loop
+  labels:
+    app.kubernetes.io/name: lesson-loop
 data:
-  apiBase: "http://lesson-loop-api:3001"
-  databaseUrl: "file:/data/lesson-loop.db"
+  apiBase: "https://lesson-loop.example.com/api"
