@@ -5,6 +5,7 @@ void main() {
   test('parses classroom session payload', () {
     final session = ClassroomSession.fromJson({
       'id': 'session-1',
+      'joinCode': 'MATH-42',
       'title': 'Fractions Warm-up',
       'subject': 'Math',
       'grade': 'Grade 4',
@@ -13,6 +14,7 @@ void main() {
       ],
     });
 
+    expect(session.joinCode, 'MATH-42');
     expect(session.title, 'Fractions Warm-up');
     expect(session.activities.single.prompt, 'What equals 1/2?');
   });

@@ -21,6 +21,7 @@ class ClassroomActivity {
 class ClassroomSession {
   const ClassroomSession({
     required this.id,
+    required this.joinCode,
     required this.title,
     required this.subject,
     required this.grade,
@@ -31,6 +32,7 @@ class ClassroomSession {
     final activitiesJson = json['activities'] as List<dynamic>? ?? const [];
     return ClassroomSession(
       id: json['id'] as String,
+      joinCode: json['joinCode'] as String? ?? '',
       title: json['title'] as String,
       subject: json['subject'] as String,
       grade: json['grade'] as String,
@@ -41,6 +43,7 @@ class ClassroomSession {
   }
 
   final String id;
+  final String joinCode;
   final String title;
   final String subject;
   final String grade;

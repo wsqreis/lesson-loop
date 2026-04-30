@@ -11,16 +11,19 @@ class LessonLoopApiClient {
   final String baseUrl;
   final http.Client _httpClient;
 
-  Future<List<ClassroomSession>> fetchSessions() async {
-    final response = await _httpClient.get(Uri.parse('$baseUrl/sessions'));
+  Future<ClassroomSession> fetchSessionByJoinCode(String joinCode) async {
+    final normalizedJoinCode = joinCode.trim().toUpperCase();
+    final response = await _httpClient.get(
+      Uri.parse('$baseUrl/sessions/join/$normalizedJoinCode'),
+    );
+    if (response.statusCode == 404) {
+      throw Exception('No classroom session found for that join code.');
+    }
     if (response.statusCode != 200) {
-      throw Exception('Could not load classroom sessions.');
+      throw Exception('Could not load the classroom session.');
     }
 
-    final json = jsonDecode(response.body) as List<dynamic>;
-    return json
-        .map((session) => ClassroomSession.fromJson(session as Map<String, dynamic>))
-        .toList();
+    return ClassroomSession.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   Future<void> submitAnswer(AnswerSubmission submission) async {

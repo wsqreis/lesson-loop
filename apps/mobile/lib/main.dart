@@ -32,12 +32,12 @@ class AnswerCaptureScreen extends StatefulWidget {
 
 class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
   final apiBaseController = TextEditingController(text: 'http://10.0.2.2:3001');
+  final joinCodeController = TextEditingController(text: 'MATH-42');
   final studentCodeController = TextEditingController(text: 'S-2042');
   final answerController = TextEditingController();
 
   LessonLoopApiClient get api => LessonLoopApiClient(baseUrl: apiBaseController.text);
 
-  List<ClassroomSession> sessions = const [];
   ClassroomSession? selectedSession;
   ClassroomActivity? selectedActivity;
   bool isCorrect = true;
@@ -47,31 +47,32 @@ class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
   @override
   void dispose() {
     apiBaseController.dispose();
+    joinCodeController.dispose();
     studentCodeController.dispose();
     answerController.dispose();
     super.dispose();
   }
 
-  Future<void> loadSessions() async {
+  Future<void> joinSession() async {
     setState(() {
       isLoading = true;
       statusMessage = null;
     });
 
     try {
-      final loadedSessions = await api.fetchSessions();
+      final session = await api.fetchSessionByJoinCode(joinCodeController.text);
       setState(() {
-        sessions = loadedSessions;
-        selectedSession = loadedSessions.isEmpty ? null : loadedSessions.first;
-        selectedActivity = selectedSession?.activities.isEmpty == true
-            ? null
-            : selectedSession?.activities.first;
-        statusMessage = loadedSessions.isEmpty
-            ? 'No classroom sessions are available yet.'
-            : 'Joined ${selectedSession!.title}.';
+        selectedSession = session;
+        selectedActivity = session.activities.isEmpty ? null : session.activities.first;
+        answerController.clear();
+        statusMessage = 'Joined ${session.title} with code ${session.joinCode}.';
       });
     } catch (error) {
-      setState(() => statusMessage = error.toString());
+      setState(() {
+        selectedSession = null;
+        selectedActivity = null;
+        statusMessage = error.toString();
+      });
     } finally {
       setState(() => isLoading = false);
     }
@@ -126,15 +127,41 @@ class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          TextField(
+            controller: joinCodeController,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Session join code',
+              helperText: 'Ask your teacher for the code shown on the board.',
+            ),
+          ),
+          const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: isLoading ? null : loadSessions,
+            onPressed: isLoading ? null : joinSession,
             icon: const Icon(Icons.login),
-            label: Text(isLoading ? 'Loading...' : 'Join latest session'),
+            label: Text(isLoading ? 'Joining...' : 'Join session'),
           ),
           const SizedBox(height: 24),
           if (selectedSession != null) ...[
             Text(selectedSession!.title, style: Theme.of(context).textTheme.headlineSmall),
             Text('${selectedSession!.subject} · ${selectedSession!.grade}'),
+            Text('Join code: ${selectedSession!.joinCode}'),
+            if (selectedSession!.activities.length > 1) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<ClassroomActivity>(
+                initialValue: selectedActivity,
+                decoration: const InputDecoration(labelText: 'Activity'),
+                items: selectedSession!.activities
+                    .map(
+                      (activity) => DropdownMenuItem(
+                        value: activity,
+                        child: Text(activity.prompt, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (activity) => setState(() => selectedActivity = activity),
+              ),
+            ],
             const SizedBox(height: 16),
           ],
           if (activity != null)
@@ -159,6 +186,7 @@ class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: answerController,
+            enabled: selectedSession != null && selectedActivity != null,
             decoration: const InputDecoration(labelText: 'Your answer'),
             minLines: 3,
             maxLines: 5,
@@ -171,7 +199,7 @@ class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: isLoading ? null : submitAnswer,
+            onPressed: isLoading || selectedSession == null || selectedActivity == null ? null : submitAnswer,
             child: const Text('Submit answer'),
           ),
           if (statusMessage != null) ...[
