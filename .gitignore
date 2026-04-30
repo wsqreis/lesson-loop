@@ -8,4 +8,6 @@ coverage
 !.env.example
 *.db
 *.db-journal
+.dart_tool/
+build/
 .DS_Store
