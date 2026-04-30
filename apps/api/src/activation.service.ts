@@ -1,6 +1,18 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { ActivationEventType } from '@prisma/client'
 import { PrismaService } from './prisma.service.js'
+
+type AnswerSubmissionPayload = {
+  sessionId: string
+  activityId: string
+  studentCode: string
+  answer: string
+  isCorrect: boolean
+}
+
+type BatchAnswerSubmissionPayload = {
+  answers: AnswerSubmissionPayload[]
+}
 
 @Injectable()
 export class ActivationService {
@@ -101,13 +113,7 @@ export class ActivationService {
     })
   }
 
-  async submitAnswer(data: {
-    sessionId: string
-    activityId: string
-    studentCode: string
-    answer: string
-    isCorrect: boolean
-  }) {
+  async submitAnswer(data: AnswerSubmissionPayload) {
     const session = await this.prisma.classroomSession.findUniqueOrThrow({
       where: { id: data.sessionId },
     })
@@ -121,6 +127,49 @@ export class ActivationService {
       },
     })
     return answer
+  }
+
+  async submitAnswersBatch(payload: BatchAnswerSubmissionPayload) {
+    const answers = payload.answers ?? []
+    if (answers.length === 0) {
+      throw new BadRequestException('At least one answer is required.')
+    }
+    if (answers.length > 500) {
+      throw new BadRequestException('Batch size cannot exceed 500 answers.')
+    }
+
+    const sessions = await this.prisma.classroomSession.findMany({
+      where: { id: { in: [...new Set(answers.map((answer) => answer.sessionId))] } },
+      include: { activities: true },
+    })
+    const sessionById = new Map(sessions.map((session) => [session.id, session]))
+
+    for (const answer of answers) {
+      const session = sessionById.get(answer.sessionId)
+      if (!session) {
+        throw new BadRequestException(`Unknown session: ${answer.sessionId}`)
+      }
+      if (!session.activities.some((activity) => activity.id === answer.activityId)) {
+        throw new BadRequestException(`Activity ${answer.activityId} does not belong to session ${answer.sessionId}.`)
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.studentAnswer.createMany({ data: answers })
+      await tx.activationEvent.createMany({
+        data: answers.map((answer) => {
+          const session = sessionById.get(answer.sessionId)!
+          return {
+            schoolId: session.schoolId,
+            teacherId: session.teacherId,
+            type: 'answer_submitted',
+            metadata: JSON.stringify({ sessionId: answer.sessionId, activityId: answer.activityId }),
+          }
+        }),
+      })
+    })
+
+    return { accepted: answers.length }
   }
 
   async convertTrial(schoolId: string, data: { plan: 'starter' | 'school' | 'district'; seats: number }) {

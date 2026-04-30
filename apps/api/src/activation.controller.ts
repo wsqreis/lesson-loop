@@ -1,6 +1,18 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common'
 import { ActivationService } from './activation.service.js'
 
+type AnswerSubmissionPayload = {
+  sessionId: string
+  activityId: string
+  studentCode: string
+  answer: string
+  isCorrect: boolean
+}
+
+type BatchAnswerSubmissionPayload = {
+  answers: AnswerSubmissionPayload[]
+}
+
 @Controller()
 export class ActivationController {
   constructor(private readonly activation: ActivationService) {}
@@ -57,17 +69,13 @@ export class ActivationController {
   }
 
   @Post('answers')
-  submitAnswer(
-    @Body()
-    body: {
-      sessionId: string
-      activityId: string
-      studentCode: string
-      answer: string
-      isCorrect: boolean
-    },
-  ) {
+  submitAnswer(@Body() body: AnswerSubmissionPayload) {
     return this.activation.submitAnswer(body)
+  }
+
+  @Post('answers/batch')
+  submitAnswersBatch(@Body() body: BatchAnswerSubmissionPayload) {
+    return this.activation.submitAnswersBatch(body)
   }
 
   @Get('analytics/funnel')

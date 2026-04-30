@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
 
 import { ActivationService } from './activation.service.js'
@@ -63,5 +64,87 @@ describe('ActivationService analytics', () => {
         hasSubscription: true,
       },
     ])
+  })
+})
+
+describe('ActivationService answer ingestion', () => {
+  it('creates answers and activation events in a batch', async () => {
+    const calls: Array<{ model: string; data: unknown[] }> = []
+    const service = createService({
+      classroomSession: {
+        findMany: async () => [
+          {
+            id: 'session-1',
+            schoolId: 'school-1',
+            teacherId: 'teacher-1',
+            activities: [{ id: 'activity-1' }],
+          },
+        ],
+      },
+      $transaction: async (callback: (tx: unknown) => Promise<void>) =>
+        callback({
+          studentAnswer: {
+            createMany: async ({ data }: { data: unknown[] }) => calls.push({ model: 'answer', data }),
+          },
+          activationEvent: {
+            createMany: async ({ data }: { data: unknown[] }) => calls.push({ model: 'event', data }),
+          },
+        }),
+    })
+
+    await expect(
+      service.submitAnswersBatch({
+        answers: [
+          {
+            sessionId: 'session-1',
+            activityId: 'activity-1',
+            studentCode: 'S-1',
+            answer: '2/4',
+            isCorrect: true,
+          },
+          {
+            sessionId: 'session-1',
+            activityId: 'activity-1',
+            studentCode: 'S-2',
+            answer: '3/4',
+            isCorrect: false,
+          },
+        ],
+      }),
+    ).resolves.toEqual({ accepted: 2 })
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toMatchObject({ model: 'answer' })
+    expect(calls[0].data).toHaveLength(2)
+    expect(calls[1]).toMatchObject({ model: 'event' })
+    expect(calls[1].data).toHaveLength(2)
+  })
+
+  it('rejects empty batches', async () => {
+    const service = createService({})
+
+    await expect(service.submitAnswersBatch({ answers: [] })).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it('rejects unknown sessions', async () => {
+    const service = createService({
+      classroomSession: {
+        findMany: async () => [],
+      },
+    })
+
+    await expect(
+      service.submitAnswersBatch({
+        answers: [
+          {
+            sessionId: 'missing-session',
+            activityId: 'activity-1',
+            studentCode: 'S-1',
+            answer: '2/4',
+            isCorrect: true,
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
   })
 })

@@ -22,3 +22,15 @@ export interface AiRecommendation {
   rationale: string
   action: string
 }
+
+export interface AnswerSubmissionPayload {
+  sessionId: string
+  activityId: string
+  studentCode: string
+  answer: string
+  isCorrect: boolean
+}
+
+export interface BatchAnswerSubmissionPayload {
+  answers: AnswerSubmissionPayload[]
+}
