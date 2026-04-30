@@ -36,6 +36,11 @@ export class ActivationController {
     return this.activation.listSessions()
   }
 
+  @Get('sessions/join/:joinCode')
+  findSessionByJoinCode(@Param('joinCode') joinCode: string) {
+    return this.activation.findSessionByJoinCode(joinCode)
+  }
+
   @Post('sessions')
   createSession(
     @Body()
@@ -68,6 +73,16 @@ export class ActivationController {
   @Get('analytics/funnel')
   funnelSummary() {
     return this.activation.funnelSummary()
+  }
+
+  @Get('analytics/schools')
+  schoolActivationMetrics() {
+    return this.activation.schoolActivationMetrics()
+  }
+
+  @Get('experiments')
+  experiments() {
+    return this.activation.experiments()
   }
 
   @Get('ai/recommendations')

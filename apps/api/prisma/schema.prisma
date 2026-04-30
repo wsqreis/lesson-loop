@@ -29,15 +29,16 @@ enum ActivationEventType {
 }
 
 model School {
-  id            String            @id @default(cuid())
+  id            String             @id @default(cuid())
   name          String
   country       String
-  createdAt     DateTime          @default(now())
+  createdAt     DateTime           @default(now())
   teachers      Teacher[]
   trials        Trial[]
   subscriptions Subscription[]
   sessions      ClassroomSession[]
   events        ActivationEvent[]
+  experiments   GrowthExperiment[]
 }
 
 model Teacher {
@@ -75,6 +76,7 @@ model ClassroomSession {
   id          String          @id @default(cuid())
   schoolId    String
   teacherId   String
+  joinCode    String          @unique
   title       String
   subject     String
   grade       String
@@ -117,4 +119,16 @@ model ActivationEvent {
   createdAt DateTime            @default(now())
   school    School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher   Teacher?            @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+}
+
+model GrowthExperiment {
+  id         String   @id @default(cuid())
+  schoolId   String?
+  name       String
+  hypothesis String
+  variant    String
+  metric     String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  school     School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }

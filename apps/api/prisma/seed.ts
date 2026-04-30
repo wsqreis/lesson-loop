@@ -4,6 +4,7 @@ const prisma = new PrismaClient()
 
 async function main() {
   await prisma.activationEvent.deleteMany()
+  await prisma.growthExperiment.deleteMany()
   await prisma.studentAnswer.deleteMany()
   await prisma.activity.deleteMany()
   await prisma.classroomSession.deleteMany()
@@ -44,6 +45,7 @@ async function main() {
     data: {
       schoolId: school.id,
       teacherId: teacher.id,
+      joinCode: 'MATH-42',
       title: 'Fractions Warm-up',
       subject: 'Math',
       grade: 'Grade 4',
@@ -96,6 +98,24 @@ async function main() {
       { schoolId: school.id, teacherId: teacher.id, type: 'session_created' },
       { schoolId: school.id, teacherId: teacher.id, type: 'answer_submitted' },
       { schoolId: school.id, teacherId: school.teachers[1].id, type: 'teacher_invited' },
+    ],
+  })
+
+  await prisma.growthExperiment.createMany({
+    data: [
+      {
+        schoolId: school.id,
+        name: 'Second teacher activation nudge',
+        hypothesis: 'Schools are more likely to convert when a second teacher joins before day three.',
+        variant: 'Invite prompt after first session',
+        metric: 'teachers_onboarded_per_school',
+      },
+      {
+        name: 'Answer-volume conversion signal',
+        hypothesis: 'Trials with more than 25 answers are ready for a subscription conversation.',
+        variant: 'Dashboard conversion banner',
+        metric: 'answers_per_trial',
+      },
     ],
   })
 }

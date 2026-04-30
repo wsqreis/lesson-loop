@@ -66,10 +66,12 @@ export class ActivationService {
     grade: string
     activities: Array<{ prompt: string; kind: string }>
   }) {
+    const joinCode = await this.createJoinCode()
     const session = await this.prisma.classroomSession.create({
       data: {
         schoolId: data.schoolId,
         teacherId: data.teacherId,
+        joinCode,
         title: data.title,
         subject: data.subject,
         grade: data.grade,
@@ -89,6 +91,13 @@ export class ActivationService {
     return this.prisma.classroomSession.findMany({
       include: { activities: true, answers: true, teacher: true, school: true },
       orderBy: { createdAt: 'desc' },
+    })
+  }
+
+  async findSessionByJoinCode(joinCode: string) {
+    return this.prisma.classroomSession.findUniqueOrThrow({
+      where: { joinCode: joinCode.toUpperCase() },
+      include: { activities: true, teacher: true, school: true },
     })
   }
 
@@ -140,10 +149,49 @@ export class ActivationService {
     }
   }
 
+  async schoolActivationMetrics() {
+    const schools = await this.prisma.school.findMany({
+      include: {
+        teachers: true,
+        sessions: { include: { answers: true } },
+        subscriptions: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return schools.map((school) => {
+      const onboardedTeachers = school.teachers.filter((teacher) => teacher.onboardedAt !== null).length
+      const answersSubmitted = school.sessions.reduce(
+        (total, session) => total + session.answers.length,
+        0,
+      )
+
+      return {
+        schoolId: school.id,
+        schoolName: school.name,
+        teachersInvited: school.teachers.length,
+        teachersOnboarded: onboardedTeachers,
+        activeTeachers: new Set(school.sessions.map((session) => session.teacherId)).size,
+        sessionsCreated: school.sessions.length,
+        answersSubmitted,
+        hasSubscription: school.subscriptions.length > 0,
+      }
+    })
+  }
+
+  async experiments() {
+    return this.prisma.growthExperiment.findMany({
+      include: { school: true },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
   async recommendations() {
     const summary = await this.funnelSummary()
     const schools = await this.listSchools()
     const sessions = await this.listSessions()
+    const metrics = await this.schoolActivationMetrics()
+    const bestSchool = [...metrics].sort((a, b) => b.answersSubmitted - a.answersSubmitted)[0]
 
     return [
       {
@@ -161,6 +209,27 @@ export class ActivationService {
         rationale: 'Teachers move faster when the next lesson step is concrete and low effort.',
         action: 'Generate a subject-specific warm-up based on the teacher’s latest session.',
       },
+      {
+        title: 'Scale from the most active school first',
+        rationale: bestSchool
+          ? `${bestSchool.schoolName} has ${bestSchool.answersSubmitted} submitted answers and ${bestSchool.teachersOnboarded} onboarded teachers.`
+          : 'No school has enough activity yet to identify an expansion account.',
+        action: 'Use the highest-engagement school as the first expansion conversation before broad outreach.',
+      },
     ]
+  }
+
+  private async createJoinCode() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const random = () =>
+      Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('')
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const joinCode = random()
+      const existing = await this.prisma.classroomSession.findUnique({ where: { joinCode } })
+      if (!existing) return joinCode
+    }
+
+    return `S${Date.now().toString(36).toUpperCase().slice(-5)}`
   }
 }
