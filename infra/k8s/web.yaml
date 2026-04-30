@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lesson-loop-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lesson-loop-web
+  template:
+    metadata:
+      labels:
+        app: lesson-loop-web
+    spec:
+      containers:
+        - name: web
+          image: lesson-loop-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE
+              valueFrom:
+                configMapKeyRef:
+                  name: lesson-loop-config
+                  key: apiBase
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lesson-loop-web
+spec:
+  selector:
+    app: lesson-loop-web
+  ports:
+    - port: 3000
+      targetPort: 3000
