@@ -17,29 +17,9 @@ LessonLoop helps schools activate more teachers through guided trials, classroom
 - Flutter SDK for mobile runtime/testing
 - Docker for containerized local runs
 
-## Local API and web setup
+## Local setup with Docker
 
-```bash
-npm install
-npm run db:generate
-npm run db:migrate
-npm run db:seed
-npm run dev
-```
-
-The API runs on `http://localhost:3001`. Nuxt will print the web URL when it starts.
-
-## Mobile setup
-
-```bash
-cd apps/mobile
-flutter pub get
-flutter run
-```
-
-Use `http://10.0.2.2:3001` as the API base URL on an Android emulator, or `http://localhost:3001` for desktop/web targets that can reach the local host directly.
-
-## Docker
+This path starts the API and the Nuxt web app in containers.
 
 ```bash
 docker compose up --build
@@ -49,6 +29,84 @@ The compose setup exposes:
 
 - API: `http://localhost:3001`
 - Web: `http://localhost:3000`
+
+Notes:
+
+- This setup does not start the Flutter app.
+- The API container uses SQLite at `file:/data/lesson-loop.db` with a Docker volume.
+- If this is your first run and the API has no data yet, use the manual API setup below to run `db:generate`, `db:migrate`, and `db:seed` once.
+
+## Local setup without Docker
+
+This path keeps API and web running directly on the host.
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### API setup
+
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev -w @lesson-loop/api
+```
+
+The API runs on `http://localhost:3001`.
+
+### Web setup
+
+In another terminal:
+
+```bash
+npm run dev -w @lesson-loop/web
+```
+
+The Nuxt web app runs on `http://localhost:3000` and talks to the API at `http://localhost:3001`.
+
+### Root dev script
+
+`npm run dev` at the repository root starts all workspaces. It is available, but it is not the recommended first-run path because it is easier to lose track of which process owns which port.
+
+## Flutter on Chrome
+
+Run the Flutter app separately from the API and the Nuxt web app.
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run -d chrome --web-port 3002
+```
+
+Ports for the browser-based local flow:
+
+- API: `http://localhost:3001`
+- Nuxt web: `http://localhost:3000`
+- Flutter web on Chrome: `http://localhost:3002`
+
+Important:
+
+- The Flutter app does not share the Nuxt port.
+- Inside the Flutter UI, the API base URL should be `http://localhost:3001` for Chrome/web.
+
+## Flutter on Android emulator
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run
+```
+
+Use `http://10.0.2.2:3001` as the API base URL on an Android emulator.
+
+## Optional Dockerized Flutter web
+
+The Flutter app now has a web target, but this repository still does not include a Docker service for it.
+
+If you need the classroom app in a browser today, use the Chrome flow above on `http://localhost:3002`. A containerized Flutter web flow would need its own Dockerfile and a dedicated port that still points the browser app to the API at `http://localhost:3001`.
 
 ## Kubernetes
 

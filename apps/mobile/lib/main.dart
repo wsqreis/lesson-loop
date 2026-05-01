@@ -31,7 +31,7 @@ class AnswerCaptureScreen extends StatefulWidget {
 }
 
 class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
-  final apiBaseController = TextEditingController(text: 'http://10.0.2.2:3001');
+  final apiBaseController = TextEditingController(text: 'http://localhost:3001');
   final joinCodeController = TextEditingController(text: 'MATH-42');
   final studentCodeController = TextEditingController(text: 'S-2042');
   final answerController = TextEditingController();
@@ -123,7 +123,7 @@ class _AnswerCaptureScreenState extends State<AnswerCaptureScreen> {
             controller: apiBaseController,
             decoration: const InputDecoration(
               labelText: 'API base URL',
-              helperText: 'Use http://10.0.2.2:3001 for Android emulator.',
+              helperText: 'Use http://localhost:3001 for Chrome/web. Use http://10.0.2.2:3001 for Android emulator.',
             ),
           ),
           const SizedBox(height: 16),
